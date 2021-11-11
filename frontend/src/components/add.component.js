@@ -4,11 +4,13 @@ import Select from 'react-select';
 import NumberFormat from 'react-number-format';
 
 // Rough idea of the page, unable to run.
-async function loginUser(credentials) {
+async function addExpense(credentials) {
     return fetch('http://localhost:5000/api/add_expense', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Headers': 'x-access-tokens',
+        'x-access-tokens': token
       },
       body: JSON.stringify({
         Add();
@@ -18,7 +20,7 @@ async function loginUser(credentials) {
    }
    
 
-export default function Add() {
+export default function Add({token}) {
   const [name, setName] = useState();
   const [categoryId, setCategoryId] = useState();
   const [amount, setAmount] = useState();
