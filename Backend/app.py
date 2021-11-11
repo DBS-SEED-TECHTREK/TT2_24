@@ -8,13 +8,6 @@ import json
 import requests
 from datetime import datetime, timedelta, timezone
 import jwt
-# from jwt import (
-#     JWT,
-#     jwk_from_dict,
-#     jwk_from_pem,
-# )
-# from jwt.utils import get_int_from_datetime
-
 import config
 
 
@@ -122,6 +115,25 @@ def hello():
 
 # For testing; remove this later
 
+def token_required(f):
+   @wraps(f)
+   def decorator(*args, **kwargs):
+       token = None
+       if 'x-access-tokens' in request.headers:
+           token = request.headers['x-access-tokens']
+ 
+       if not token:
+           return jsonify({'message': 'a valid token is missing'})
+       try:
+           print("token: ", token)
+           data = jwt.decode(token, "SECRET_KEY", algorithms=["HS256"])
+           print("data[id]: ", data['id'])
+           current_user = user_db.query.filter_by(id=data['id']).first()
+       except:
+           return jsonify({'message': 'token is invalid'})
+ 
+       return f(current_user, *args, **kwargs)
+   return decorator
 
 
 # Get all Users
@@ -145,16 +157,13 @@ def get_projects():
 
 # get_projects_by_user
 @app.route('/api/get_projects_by_user_id', methods=['POST'])
-def get_projects_by_user_id():
-    data = request.get_json()
-    user_id = data['user_id']
+@token_required
+def get_projects_by_user_id(current_user):
+    user_id = current_user.id
     result = []
     for project in project_db.query.filter_by(user_id=user_id).all():
         result.append(project.json())
     return jsonify({"type": "success", "project": result}), 200
-
-    
-
 
 
 @app.route('/api/get_categories', methods=['POST'])
@@ -165,50 +174,21 @@ def get_categories():
     return jsonify({"type": "success", "category": result}), 200
 
 
-def token_required(f):
-   @wraps(f)
-   def decorator(*args, **kwargs):
-       token = None
-       if 'x-access-tokens' in request.headers:
-           token = request.headers['x-access-tokens']
- 
-       if not token:
-           return jsonify({'message': 'a valid token is missing'})
-       try:
-           data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-           current_user = user_db.query.filter_by(public_id=data['id']).first()
-       except:
-           return jsonify({'message': 'token is invalid'})
- 
-       return f(current_user, *args, **kwargs)
-   return decorator
-
 @app.route('/api/login', methods=['GET'])
 def login():
     request_data = request.get_json()
-    print(request_data)
 
     input_username = request_data['username']
     input_password = request_data['password']
 
-    isAuthorized = False
-    user_name = ""
-    user_appt = ""
-
     # CHECK USERNAME & PASSWORD
-    for user in user_db.query.all():
-        if(user.username == input_username and user.password == input_password):
-            isAuthorized = True
-            user_name = user.name
-            user_appt = user.appointment
-            break
+    user = user_db.query.filter_by(username=input_username).first()  
+    
+    if user.password == input_password:
+        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
+        return jsonify({'token' : token})
 
-    if not isAuthorized:
-        return Response(status=401)
-
-    # CREATE TOKEN
-    token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
-    return jsonify({'token' : token})
+    return Response(status=401)
 
 
 if __name__ == '__main__':
