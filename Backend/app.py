@@ -227,41 +227,60 @@ def get_expense(current_user):
     return jsonify({"type": "success", "project": result}), 200
 
 
-# # update expense by project
-# @app.route('/api/update_expense', methods=['POST'])
-# def update_expense():
-#     data = request.get_json()
-#     expense_info = expense_db(**data)
-#     id = data['id']
-#     project_id = request.json['project_id']
-#     category_id = request.json['category_id']
-#     name = request.json['name']
-#     description = request.json['description']
-#     amount = request.json['amount']
-#     created_at = request.json['created_at']
-#     created_by = request.json['created_by']
-#     updated_at = request.json['updated_at']
-#     updated_by = request.json['updated_by']
+# update expense by project
+@app.route('/api/update_expense', methods=['PUT'])
+def update_expense():
+    data = request.get_json()
+    expense_info = expense_db(**data)
+    id = data['id']
+    project_id = request.json['project_id']
+    category_id = request.json['category_id']
+    name = request.json['name']
+    description = request.json['description']
+    amount = request.json['amount']
+    created_at = request.json['created_at']
+    created_by = request.json['created_by']
+    updated_at = request.json['updated_at']
+    updated_by = request.json['updated_by']
     
-    
-#     expense_info = expense_db.query.get_or_404(int(id))
-    
-    
-    
-#     if existing_expense is not None:
-#         existing_expense.project_id = project_id;
+    expense_info = expense_db.query.get_or_404(int(id))
+    expense_info.project_id = project_id;
+    expense_info.category_id = category_id;
+    expense_info.name = name;
+    expense_info.description = description;
+    expense_info.amount = amount;
+    expense_info.created_at = created_at;
+    expense_info.created_by = created_by;
+    expense_info.updated_at = updated_at;
+    expense_info.updated_by = updated_by;
 
-#         db.session.commit()
-#     result = []
-#     for expense in expense_db.query.filter_by(id=id).all():
-#         result.append(expense.json())
-#     return jsonify({"type": "success", "project": result}), 200
+    db.session.commit()
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
 
 
-
+<<<<<<< Updated upstream
 #######################
 ## CATEGORIES
 #######################
+=======
+# delete expense by project
+@app.route('/api/delete_expense', methods = ['DELETE'])
+def delete_expense():
+    data = request.get_json()
+    id = data['id']
+    expense_info = expense_db.query.get(int(id))
+    
+    if expense_info is None:
+        return "Expense Not Deleted Successfully", 200
+    else:
+        db.session.delete(expense_info)
+        db.session.commit()
+        return "Expense Deleted Successfully", 200
+
+>>>>>>> Stashed changes
 
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
