@@ -1,10 +1,22 @@
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
 from flask import Flask, jsonify
 from flask import request
 from flask import Response
 import json
 import requests
+from datetime import datetime, timedelta, timezone
+import jwt
+# from jwt import (
+#     JWT,
+#     jwk_from_dict,
+#     jwk_from_pem,
+# )
+# from jwt.utils import get_int_from_datetime
+
+import config
+
 
 app = Flask(__name__)
 
@@ -124,18 +136,50 @@ def get_categories():
     return jsonify({"type": "success", "category": result}), 200
 
 
-@app.route('/login', methods=['GET'])
+def token_required(f):
+   @wraps(f)
+   def decorator(*args, **kwargs):
+       token = None
+       if 'x-access-tokens' in request.headers:
+           token = request.headers['x-access-tokens']
+ 
+       if not token:
+           return jsonify({'message': 'a valid token is missing'})
+       try:
+           data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+           current_user = user_db.query.filter_by(public_id=data['id']).first()
+       except:
+           return jsonify({'message': 'token is invalid'})
+ 
+       return f(current_user, *args, **kwargs)
+   return decorator
+
+@app.route('/api/login', methods=['GET'])
 def login():
     request_data = request.get_json()
+    print(request_data)
 
-    username = request_data['username']
-    password = request_data['password']
+    input_username = request_data['username']
+    input_password = request_data['password']
+
+    isAuthorized = False
+    user_name = ""
+    user_appt = ""
 
     # CHECK USERNAME & PASSWORD
+    for user in user_db.query.all():
+        if(user.username == input_username and user.password == input_password):
+            isAuthorized = True
+            user_name = user.name
+            user_appt = user.appointment
+            break
+
+    if not isAuthorized:
+        return Response(status=401)
 
     # CREATE TOKEN
-
-    return Response(status=201)
+    token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
+    return jsonify({'token' : token})
 
 
 if __name__ == '__main__':
