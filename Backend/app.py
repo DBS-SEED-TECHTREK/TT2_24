@@ -80,16 +80,16 @@ class project_db(db.Model):
 class expense_db(db.Model):
     __tablename__ = "expense"
 
-    id = db.Column(db.Integer(), primary_key=True)
-    project_id = db.Column(db.Integer())
-    category_id = db.Column(db.Integer())
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer)
+    category_id = db.Column(db.Integer)
     name = db.Column(db.String())
     description = db.Column(db.String())
-    amount = db.Column(db.Integer())
+    amount = db.Column(db.Integer)
     created_at = db.Column(db.String())
-    created_by = db.Column(db.String())
+    created_by = db.Column(db.DateTime)
     updated_at = db.Column(db.String())
-    updated_by = db.Column(db.String())
+    updated_by = db.Column(db.DateTime())
     
     
     def __init__(self, id, project_id, category_id, name, description,amount, created_at, created_by,updated_at,updated_by):
@@ -115,6 +115,9 @@ def hello():
 
 # For testing; remove this later
 
+#######################
+## AUTHORIZATION & AUTHENTICATION
+#######################
 def token_required(f):
    @wraps(f)
    def decorator(*args, **kwargs):
@@ -136,6 +139,27 @@ def token_required(f):
    return decorator
 
 
+@app.route('/api/login', methods=['GET'])
+def login():
+    request_data = request.get_json()
+
+    input_username = request_data['username']
+    input_password = request_data['password']
+
+    # CHECK USERNAME & PASSWORD
+    user = user_db.query.filter_by(username=input_username).first()  
+    
+    if user.password == input_password:
+        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
+        return jsonify({'token' : token})
+
+    return Response(status=401)
+
+
+#######################
+## USERS
+#######################
+
 # Get all Users
 @app.route('/api/get_users', methods=['POST'])
 def get_users():
@@ -145,6 +169,9 @@ def get_users():
     return jsonify({"type": "success", "users": result}), 200
 
 
+#######################
+## PROJECTS
+#######################
 
 # Get all project
 @app.route('/api/get_projects', methods=['POST'])
@@ -166,29 +193,82 @@ def get_projects_by_user_id(current_user):
     return jsonify({"type": "success", "project": result}), 200
 
 
+#######################
+## EXPENSES
+#######################
+    
+# create expense by project
+@app.route('/api/add_expense', methods=['POST'])
+@token_required
+def add_expense(current_user):
+    data = request.get_json()
+    expense_info = expense_db(**data)
+    id = current_user.id
+    existing_expense = expense_db.query.filter_by(id=id).one_or_none()
+    if existing_expense is None:
+        #expense = expense_db(id,project_id,category_id,name,description,amount,created_at,created_by,updated_at,updated_by)
+        db.session.add(expense_info)
+        db.session.commit()
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# get expense by project
+@app.route('/api/get_expense', methods=['POST'])
+@token_required
+def get_expense(current_user):
+    data = request.get_json()
+    id = current_user.id
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# # update expense by project
+# @app.route('/api/update_expense', methods=['POST'])
+# def update_expense():
+#     data = request.get_json()
+#     expense_info = expense_db(**data)
+#     id = data['id']
+#     project_id = request.json['project_id']
+#     category_id = request.json['category_id']
+#     name = request.json['name']
+#     description = request.json['description']
+#     amount = request.json['amount']
+#     created_at = request.json['created_at']
+#     created_by = request.json['created_by']
+#     updated_at = request.json['updated_at']
+#     updated_by = request.json['updated_by']
+    
+    
+#     expense_info = expense_db.query.get_or_404(int(id))
+    
+    
+    
+#     if existing_expense is not None:
+#         existing_expense.project_id = project_id;
+
+#         db.session.commit()
+#     result = []
+#     for expense in expense_db.query.filter_by(id=id).all():
+#         result.append(expense.json())
+#     return jsonify({"type": "success", "project": result}), 200
+
+
+
+#######################
+## CATEGORIES
+#######################
+
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
     result = []
     for category in category_db.query.all():
         result.append(category.json())
     return jsonify({"type": "success", "category": result}), 200
-
-
-@app.route('/api/login', methods=['GET'])
-def login():
-    request_data = request.get_json()
-
-    input_username = request_data['username']
-    input_password = request_data['password']
-
-    # CHECK USERNAME & PASSWORD
-    user = user_db.query.filter_by(username=input_username).first()  
-    
-    if user.password == input_password:
-        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
-        return jsonify({'token' : token})
-
-    return Response(status=401)
 
 
 if __name__ == '__main__':
