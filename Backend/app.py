@@ -87,16 +87,16 @@ class project_db(db.Model):
 class expense_db(db.Model):
     __tablename__ = "expense"
 
-    id = db.Column(db.Integer(), primary_key=True)
-    project_id = db.Column(db.Integer())
-    category_id = db.Column(db.Integer())
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer)
+    category_id = db.Column(db.Integer)
     name = db.Column(db.String())
     description = db.Column(db.String())
-    amount = db.Column(db.Integer())
+    amount = db.Column(db.Integer)
     created_at = db.Column(db.String())
-    created_by = db.Column(db.String())
+    created_by = db.Column(db.DateTime)
     updated_at = db.Column(db.String())
-    updated_by = db.Column(db.String())
+    updated_by = db.Column(db.DateTime())
     
     
     def __init__(self, id, project_id, category_id, name, description,amount, created_at, created_by,updated_at,updated_by):
@@ -154,6 +154,65 @@ def get_projects_by_user_id():
     return jsonify({"type": "success", "project": result}), 200
 
     
+# create expense by project
+@app.route('/api/add_expense', methods=['POST'])
+def add_expense():
+    data = request.get_json()
+    expense_info = expense_db(**data)
+    id = data['id']
+    existing_expense = expense_db.query.filter_by(id=id).one_or_none()
+    if existing_expense is None:
+        #expense = expense_db(id,project_id,category_id,name,description,amount,created_at,created_by,updated_at,updated_by)
+        db.session.add(expense_info)
+        db.session.commit()
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# get expense by project
+@app.route('/api/get_expense', methods=['POST'])
+def get_expense():
+    data = request.get_json()
+    id = data['id']
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# # update expense by project
+# @app.route('/api/update_expense', methods=['POST'])
+# def update_expense():
+#     data = request.get_json()
+#     expense_info = expense_db(**data)
+#     id = data['id']
+#     project_id = request.json['project_id']
+#     category_id = request.json['category_id']
+#     name = request.json['name']
+#     description = request.json['description']
+#     amount = request.json['amount']
+#     created_at = request.json['created_at']
+#     created_by = request.json['created_by']
+#     updated_at = request.json['updated_at']
+#     updated_by = request.json['updated_by']
+    
+    
+#     expense_info = expense_db.query.get_or_404(int(id))
+    
+    
+    
+#     if existing_expense is not None:
+#         existing_expense.project_id = project_id;
+
+#         db.session.commit()
+#     result = []
+#     for expense in expense_db.query.filter_by(id=id).all():
+#         result.append(expense.json())
+#     return jsonify({"type": "success", "project": result}), 200
+
+
 
 
 
