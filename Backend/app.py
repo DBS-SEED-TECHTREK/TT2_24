@@ -139,13 +139,12 @@ def token_required(f):
    return decorator
 
 
-@app.route('/api/login', methods=['GET'])
+@app.route('/api/login', methods=['POST'])
 def login():
     request_data = request.get_json()
 
     input_username = request_data['username']
     input_password = request_data['password']
-
     # CHECK USERNAME & PASSWORD
     user = user_db.query.filter_by(username=input_username).first()  
     
@@ -260,12 +259,6 @@ def update_expense():
         result.append(expense.json())
     return jsonify({"type": "success", "project": result}), 200
 
-
-<<<<<<< Updated upstream
-#######################
-## CATEGORIES
-#######################
-=======
 # delete expense by project
 @app.route('/api/delete_expense', methods = ['DELETE'])
 def delete_expense():
@@ -280,8 +273,11 @@ def delete_expense():
         db.session.commit()
         return "Expense Deleted Successfully", 200
 
->>>>>>> Stashed changes
 
+
+#######################
+## CATEGORIES
+#######################
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
     result = []

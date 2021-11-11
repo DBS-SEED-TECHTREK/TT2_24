@@ -17,10 +17,9 @@ function App() {
   // Token Auth
   const { token, setToken } = useToken();
 
-  // TODO: Add back for authentication testing
-  // if(!token) {
-  //   return <Login setToken={setToken} />
-  // }
+  if(!token) {
+    return <Login setToken={setToken} />
+  }
 
   // App
   return (
@@ -38,7 +37,7 @@ function App() {
           </div>
       </nav>
 
-        <Route path="/" exact component={DashboardPage} />
+        <Route path="/" exact><DashboardPage token={token}/></Route>
         <Route path="/expense" exact component={ExpensePage} />
     </div>
 
