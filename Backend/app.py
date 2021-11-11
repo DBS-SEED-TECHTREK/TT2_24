@@ -1,8 +1,10 @@
-from flask import Flask, jsonify
-import json
-import requests
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, jsonify
+from flask import request
+from flask import Response
+import json
+import requests
 
 app = Flask(__name__)
 
@@ -45,6 +47,18 @@ def get_users():
     for user in user_db.query.all():
         result.append(user.json())
     return jsonify({"type": "success", "users": result}), 200
+
+@app.route('/login', methods=['GET'])
+def login():
+    username = request.authorization.username
+    password = request.authorization.password
+
+    # CHECK USERNAME & PASSWORD
+
+    # CREATE TOKEN
+
+    return Response(status=201)
+
 
 if __name__ == '__main__':
     # app.run(host='0.0.0.0', port=5000, debug=True) # mac
