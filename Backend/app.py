@@ -121,12 +121,41 @@ def hello():
     return "Hello World!"
 
 # For testing; remove this later
+
+
+
+# Get all Users
 @app.route('/api/get_users', methods=['POST'])
 def get_users():
     result = []
     for user in user_db.query.all():
         result.append(user.json())
     return jsonify({"type": "success", "users": result}), 200
+
+
+
+# Get all project
+@app.route('/api/get_projects', methods=['POST'])
+def get_projects():
+    result = []
+    for project in project_db.query.all():
+        result.append(project.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# get_projects_by_user
+@app.route('/api/get_projects_by_user_id', methods=['POST'])
+def get_projects_by_user_id():
+    data = request.get_json()
+    user_id = data['user_id']
+    result = []
+    for project in project_db.query.filter_by(user_id=user_id).all():
+        result.append(project.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+    
+
+
 
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
