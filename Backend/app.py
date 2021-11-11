@@ -1,10 +1,15 @@
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
 from flask import Flask, jsonify
 from flask import request
 from flask import Response
 import json
 import requests
+from datetime import datetime, timedelta, timezone
+import jwt
+import config
+
 
 app = Flask(__name__)
 
@@ -75,16 +80,16 @@ class project_db(db.Model):
 class expense_db(db.Model):
     __tablename__ = "expense"
 
-    id = db.Column(db.Integer(), primary_key=True)
-    project_id = db.Column(db.Integer())
-    category_id = db.Column(db.Integer())
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer)
+    category_id = db.Column(db.Integer)
     name = db.Column(db.String())
     description = db.Column(db.String())
-    amount = db.Column(db.Integer())
+    amount = db.Column(db.Integer)
     created_at = db.Column(db.String())
-    created_by = db.Column(db.String())
+    created_by = db.Column(db.DateTime)
     updated_at = db.Column(db.String())
-    updated_by = db.Column(db.String())
+    updated_by = db.Column(db.DateTime())
     
     
     def __init__(self, id, project_id, category_id, name, description,amount, created_at, created_by,updated_at,updated_by):
@@ -110,7 +115,50 @@ def hello():
 
 # For testing; remove this later
 
+#######################
+## AUTHORIZATION & AUTHENTICATION
+#######################
+def token_required(f):
+   @wraps(f)
+   def decorator(*args, **kwargs):
+       token = None
+       if 'x-access-tokens' in request.headers:
+           token = request.headers['x-access-tokens']
+ 
+       if not token:
+           return jsonify({'message': 'a valid token is missing'})
+       try:
+           print("token: ", token)
+           data = jwt.decode(token, "SECRET_KEY", algorithms=["HS256"])
+           print("data[id]: ", data['id'])
+           current_user = user_db.query.filter_by(id=data['id']).first()
+       except:
+           return jsonify({'message': 'token is invalid'})
+ 
+       return f(current_user, *args, **kwargs)
+   return decorator
 
+
+@app.route('/api/login', methods=['GET'])
+def login():
+    request_data = request.get_json()
+
+    input_username = request_data['username']
+    input_password = request_data['password']
+
+    # CHECK USERNAME & PASSWORD
+    user = user_db.query.filter_by(username=input_username).first()  
+    
+    if user.password == input_password:
+        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
+        return jsonify({'token' : token})
+
+    return Response(status=401)
+
+
+#######################
+## USERS
+#######################
 
 # Get all Users
 @app.route('/api/get_users', methods=['POST'])
@@ -121,6 +169,9 @@ def get_users():
     return jsonify({"type": "success", "users": result}), 200
 
 
+#######################
+## PROJECTS
+#######################
 
 # Get all project
 @app.route('/api/get_projects', methods=['POST'])
@@ -133,17 +184,103 @@ def get_projects():
 
 # get_projects_by_user
 @app.route('/api/get_projects_by_user_id', methods=['POST'])
-def get_projects_by_user_id():
-    data = request.get_json()
-    user_id = data['user_id']
+@token_required
+def get_projects_by_user_id(current_user):
+    user_id = current_user.id
     result = []
     for project in project_db.query.filter_by(user_id=user_id).all():
         result.append(project.json())
     return jsonify({"type": "success", "project": result}), 200
 
+
+#######################
+## EXPENSES
+#######################
     
+# create expense by project
+@app.route('/api/add_expense', methods=['POST'])
+@token_required
+def add_expense(current_user):
+    data = request.get_json()
+    expense_info = expense_db(**data)
+    id = current_user.id
+    existing_expense = expense_db.query.filter_by(id=id).one_or_none()
+    if existing_expense is None:
+        #expense = expense_db(id,project_id,category_id,name,description,amount,created_at,created_by,updated_at,updated_by)
+        db.session.add(expense_info)
+        db.session.commit()
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
 
 
+# get expense by project
+@app.route('/api/get_expense', methods=['POST'])
+@token_required
+def get_expense(current_user):
+    data = request.get_json()
+    id = current_user.id
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+# update expense by project
+@app.route('/api/update_expense', methods=['PUT'])
+def update_expense():
+    data = request.get_json()
+    expense_info = expense_db(**data)
+    id = data['id']
+    project_id = request.json['project_id']
+    category_id = request.json['category_id']
+    name = request.json['name']
+    description = request.json['description']
+    amount = request.json['amount']
+    created_at = request.json['created_at']
+    created_by = request.json['created_by']
+    updated_at = request.json['updated_at']
+    updated_by = request.json['updated_by']
+    
+    expense_info = expense_db.query.get_or_404(int(id))
+    expense_info.project_id = project_id;
+    expense_info.category_id = category_id;
+    expense_info.name = name;
+    expense_info.description = description;
+    expense_info.amount = amount;
+    expense_info.created_at = created_at;
+    expense_info.created_by = created_by;
+    expense_info.updated_at = updated_at;
+    expense_info.updated_by = updated_by;
+
+    db.session.commit()
+    result = []
+    for expense in expense_db.query.filter_by(id=id).all():
+        result.append(expense.json())
+    return jsonify({"type": "success", "project": result}), 200
+
+
+<<<<<<< Updated upstream
+#######################
+## CATEGORIES
+#######################
+=======
+# delete expense by project
+@app.route('/api/delete_expense', methods = ['DELETE'])
+def delete_expense():
+    data = request.get_json()
+    id = data['id']
+    expense_info = expense_db.query.get(int(id))
+    
+    if expense_info is None:
+        return "Expense Not Deleted Successfully", 200
+    else:
+        db.session.delete(expense_info)
+        db.session.commit()
+        return "Expense Deleted Successfully", 200
+
+>>>>>>> Stashed changes
 
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
@@ -151,18 +288,6 @@ def get_categories():
     for category in category_db.query.all():
         result.append(category.json())
     return jsonify({"type": "success", "category": result}), 200
-
-
-@app.route('/login', methods=['GET'])
-def login():
-    username = request.authorization.username
-    password = request.authorization.password
-
-    # CHECK USERNAME & PASSWORD
-
-    # CREATE TOKEN
-
-    return Response(status=201)
 
 
 if __name__ == '__main__':
