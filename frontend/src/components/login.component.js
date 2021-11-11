@@ -18,16 +18,25 @@ export default function Login({ setToken }) {
   const [password, setPassword] = useState();
   const handleSubmit = async e => {
     e.preventDefault();
+    try{
     const token = await loginUser({
       username,
       password
     });
+    
+    console.log("asdf")
+    console.log(token)
     setToken(token);
+  }
+  catch(err){
+    console.log("asdf")
+    console.log(err)
+  }
   }
 
 
   return(
-    <div className="login-wrapper">
+    <div className="container">
       <h1>Please Log In</h1>
       <form onSubmit={handleSubmit}>
         <label>
