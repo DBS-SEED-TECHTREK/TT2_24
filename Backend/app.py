@@ -8,7 +8,7 @@ import json
 import requests
 from datetime import datetime, timedelta, timezone
 import jwt
-import config
+from config import SECRET_KEY, SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATION
 
 
 app = Flask(__name__)
@@ -17,8 +17,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Database
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+mysqlconnector://admin:dbs_seed_2021@dbs-seed.cq637ugrj1yy.us-east-1.rds.amazonaws.com/project_expenses"
-app.config["SQLALCHEMY_TRACK_MODIFICATION"] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATION"] = SQLALCHEMY_TRACK_MODIFICATION
 db = SQLAlchemy(app)
 
 # Model for Login
@@ -109,12 +109,6 @@ class expense_db(db.Model):
                 "amount": self.amount,"created_at": self.created_at,"created_by": self.created_by,"updated_at": self.updated_at,"updated_by": self.updated_by}
 
 
-@app.route('/')
-def hello():
-    return "Hello World!"
-
-# For testing; remove this later
-
 #######################
 ## AUTHORIZATION & AUTHENTICATION
 #######################
@@ -129,7 +123,7 @@ def token_required(f):
            return jsonify({'message': 'a valid token is missing'})
        try:
            print("token: ", token)
-           data = jwt.decode(token, "SECRET_KEY", algorithms=["HS256"])
+           data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
            print("data[id]: ", data['id'])
            current_user = user_db.query.filter_by(id=data['id']).first()
        except:
@@ -139,7 +133,7 @@ def token_required(f):
    return decorator
 
 
-@app.route('/api/login', methods=['GET'])
+@app.route('/api/login', methods=['POST'])
 def login():
     request_data = request.get_json()
 
@@ -150,10 +144,10 @@ def login():
     user = user_db.query.filter_by(username=input_username).first()  
     
     if user.password == input_password:
-        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, "SECRET_KEY", "HS256")
+        token = jwt.encode({'id' : user.id, 'exp' : datetime.utcnow() + timedelta(minutes=60)}, SECRET_KEY, "HS256")
         return jsonify({'token' : token})
 
-    return Response(status=401)
+    return jsonify({'message': 'credentials are invalid'}), 401
 
 
 #######################
@@ -220,16 +214,17 @@ def add_expense(current_user):
 @token_required
 def get_expense(current_user):
     data = request.get_json()
-    id = current_user.id
+    id = data['id']
     result = []
-    for expense in expense_db.query.filter_by(id=id).all():
+    for expense in expense_db.query.filter_by(project_id=id).all():
         result.append(expense.json())
     return jsonify({"type": "success", "project": result}), 200
 
 
 # update expense by project
 @app.route('/api/update_expense', methods=['PUT'])
-def update_expense():
+@token_required
+def update_expense(current_user):
     data = request.get_json()
     expense_info = expense_db(**data)
     id = data['id']
@@ -261,14 +256,10 @@ def update_expense():
     return jsonify({"type": "success", "project": result}), 200
 
 
-<<<<<<< Updated upstream
-#######################
-## CATEGORIES
-#######################
-=======
 # delete expense by project
 @app.route('/api/delete_expense', methods = ['DELETE'])
-def delete_expense():
+@token_required
+def delete_expense(current_user):
     data = request.get_json()
     id = data['id']
     expense_info = expense_db.query.get(int(id))
@@ -280,8 +271,10 @@ def delete_expense():
         db.session.commit()
         return "Expense Deleted Successfully", 200
 
->>>>>>> Stashed changes
 
+#######################
+## CATEGORIES
+#######################
 @app.route('/api/get_categories', methods=['POST'])
 def get_categories():
     result = []
