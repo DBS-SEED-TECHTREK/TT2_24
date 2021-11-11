@@ -31,6 +31,10 @@ export default function Dashboard({token}) {
   useEffect(() => {fetchData(token)},[])
 
   return (
-    <Project projectList={projectList}/>
+    <div>
+      <h2>Project List</h2>
+        <Project projectList={projectList}/>
+    </div>
+    
   ) 
 }

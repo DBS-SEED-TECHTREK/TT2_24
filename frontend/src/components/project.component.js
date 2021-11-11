@@ -9,13 +9,8 @@ export default function Dashboard({projectList=[]}) {
 
   const columns = [
     {
-      name: 'Id',
+      name: 'Project Id',
       cell: row => row.id
-    },
-    {
-        name: 'User_Id',
-        sortable: true,
-        selector: row => row.user_id
     },
     {
         name: 'Name',
