@@ -50,8 +50,10 @@ def get_users():
 
 @app.route('/login', methods=['GET'])
 def login():
-    username = request.authorization.username
-    password = request.authorization.password
+    request_data = request.get_json()
+
+    username = request_data['username']
+    password = request_data['password']
 
     # CHECK USERNAME & PASSWORD
 
