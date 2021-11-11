@@ -4,7 +4,7 @@ import Select from 'react-select';
 import NumberFormat from 'react-number-format';
 
 // Rough idea of the page, unable to run.
-async function addExpense(credentials) {
+async function addExpense() {
     return fetch('http://localhost:5000/api/add_expense', {
       method: 'POST',
       headers: {
@@ -27,7 +27,9 @@ export default function Add({token}) {
   const [description, setDescription] = useState();
   const handleSubmit = async e => {
     e.preventDefault();
+    addExpense();
   }
+
 
   // get from api but not sure how
   const options = [
