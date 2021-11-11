@@ -92,8 +92,8 @@ class expense_db(db.Model):
     updated_by = db.Column(db.DateTime())
     
     
-    def __init__(self, id, project_id, category_id, name, description,amount, created_at, created_by,updated_at,updated_by):
-        self.id = id
+    def __init__(self, project_id, category_id, name, description,amount, created_at, created_by,updated_at,updated_by):
+        # self.id = id
         self.project_id = project_id
         self.category_id = category_id
         self.name = name
@@ -191,21 +191,13 @@ def get_projects_by_user_id(current_user):
 #######################
     
 # create expense by project
-
 @app.route('/api/add_expense', methods=['POST'])
-
 @token_required
-
 def add_expense(current_user):
     data = request.get_json()
     expense_info = expense_db(**data)
-    # existing_expense = expense_db.query.filter_by(id=id).one_or_none()
-    # if existing_expense is None:
     db.session.add(expense_info)
     db.session.commit()
-    result = []
-    # for expense in expense_db.query.filter_by(id=id).all():
-        # result.append(expense.json())
     return jsonify({"type": "success", "expense": "expense added Succesfully"}), 200
 
 
